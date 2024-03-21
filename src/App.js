@@ -7,48 +7,37 @@ const getTitle = (title) => (title);
 
 
 //Components
-const List = (props) => (
+const List = ({list}) => (
   <ul>
-    {props.list.map((item) => (
+    {list.map((item) => (
       <Item key={item.objectID} item={item} />
     ))}
   </ul>
 );
 
-const Item = (props) => (
+const Item = ({item}) => (
   <li>
     <span>
-        <a href={props.item.url}>{props.item.title}</a>
+        <a href={item.url}>{item.title}</a>
     </span>
     <span>
-      {props.item.author}
+      {item.author}
     </span>
     <span>
-      {props.item.num_comments}
+      {item.num_comments}
     </span>
     <span>
-      {props.item.points}
+      {item.points}
     </span>
   </li>
 )
 
-const Search = (props) => {
-  //React state
-  const [searchTerm, setSearchTerm] = React.useState('');
-
-  //handle change
-  const handleChange = (event) => {
-    setSearchTerm(event.target.value);
-    props.onSearch(event);
-  }
-  return(
+const Search = ({onSearch, search}) => (
     <div>
-      <label htmlFor='search'> Search:
-        <input id="search" type="text"/>
-      </label>
+      <label htmlFor='search'> Search: </label>
+        <input id="search" type="text" onChange={onSearch} value={search}/>
     </div>
-    );
-  };
+);
 
 
 
@@ -75,17 +64,30 @@ const App = () => {
     },
   ];
 
+  //React state
+  const [searchTerm, setSearchTerm] = React.useState('React');
+
+  //handle change
+  const handleChange = (event) => {
+    setSearchTerm(event.target.value);
+  }
+
   //Callback handler
   const handleSearch = (event) => {
-    console.log(event.target.value);
+    setSearchTerm(event.target.value);
   };
+
+  //filtering stories
+  const searchedStories = stories.filter((story) =>
+    story.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return(
   <div>
       <h1>{getTitle("My Hacker Stories")}</h1>
-      < Search onSearch={handleSearch}/>
+      < Search search={searchTerm} onSearch={handleSearch}/>
       <hr/>
-      < List list={stories}/>
+      < List list={searchedStories}/>
     </div>
   );
   };
