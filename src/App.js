@@ -33,12 +33,24 @@ const Item = ({item}) => (
 )
 
 const Search = ({onSearch, search}) => (
-    <div>
+    <>
       <label htmlFor='search'> Search: </label>
-        <input id="search" type="text" onChange={onSearch} value={search}/>
-    </div>
+      <input id="search" type="text" onChange={onSearch} value={search}/>
+    </>
 );
 
+//Handles syncing value of any local storage with state based on unique key id
+  const useStorageState = (key, initialState) => {
+
+    const [value, setValue] = React.useState(localStorage.getItem('value') || initialState);
+
+    React.useEffect(() => {
+    localStorage.setItem('value', value);
+    }, [value]);
+
+    return [value, setValue];
+
+  }
 
 
 //Parent Component
@@ -65,7 +77,9 @@ const App = () => {
   ];
 
   //React state
-  const [searchTerm, setSearchTerm] = React.useState('React');
+  //Synchronize browser local storage with state
+  const [searchTerm, setSearchTerm] = useStorageState('search','React');
+  
 
   //handle change
   const handleChange = (event) => {
@@ -74,6 +88,7 @@ const App = () => {
 
   //Callback handler
   const handleSearch = (event) => {
+    //save input with state
     setSearchTerm(event.target.value);
   };
 
