@@ -5,59 +5,7 @@ import * as React from 'react';
 //Functions
 const getTitle = (title) => (title);
 
-
-//Components
-const List = ({list}) => (
-  <ul>
-    {list.map((item) => (
-      <Item key={item.objectID} item={item} />
-    ))}
-  </ul>
-);
-
-const Item = ({item}) => (
-  <li>
-    <span>
-        <a href={item.url}>{item.title}</a>
-    </span>
-    <span>
-      {item.author}
-    </span>
-    <span>
-      {item.num_comments}
-    </span>
-    <span>
-      {item.points}
-    </span>
-  </li>
-)
-
-const Search = ({onSearch, search}) => (
-    <>
-      <label htmlFor='search'> Search: </label>
-      <input id="search" type="text" onChange={onSearch} value={search}/>
-    </>
-);
-
-//Handles syncing value of any local storage with state based on unique key id
-  const useStorageState = (key, initialState) => {
-
-    const [value, setValue] = React.useState(localStorage.getItem('value') || initialState);
-
-    React.useEffect(() => {
-    localStorage.setItem('value', value);
-    }, [value]);
-
-    return [value, setValue];
-
-  }
-
-
-//Parent Component
-const App = () => {
-
-  //variable
-  const stories = [
+const initialStories = [
     {
       title: 'React',
       url: 'https://reactjs.org/',
@@ -76,14 +24,89 @@ const App = () => {
     },
   ];
 
-  //React state
+//Components
+const List = ({list, onRemoveItem}) => (
+  <ul>
+    {list.map((item) => (
+      <Item key={item.objectID} item={item} onRemoveItem={onRemoveItem} />
+    ))}
+  </ul>
+);
+
+const Item = ({item, onRemoveItem}) => (
+  <li>
+    <span>
+        <a href={item.url}>{item.title}</a>
+    </span>
+    <span>
+      {item.author}
+    </span>
+    <span>
+      {item.num_comments}
+    </span>
+    <span>
+      {item.points}
+    </span>
+    <span>
+      <button type="button" onClick={() => onRemoveItem(item)}>
+        Dismiss
+      </button>
+    </span>
+  </li>
+);
+
+const InputWithLabel = ({ id, value, type='text', onInputChange, isFocused, children }) => {
+  const inputRef = React.useRef();
+  React.useEffect(() => {
+    if(isFocused && inputRef.current){
+      inputRef.current.focus();
+    }
+  }, [isFocused])
+
+  return(
+    <>
+      <label htmlFor={id}>{children}</label>
+      <input
+        ref={inputRef}
+        id={id}
+        type={type}
+        value={value}
+        onChange={onInputChange}
+      />
+    </>
+  );
+};
+
+//Handles syncing value of any local storage with state based on unique key id
+  const useStorageState = (key, initialState) => {
+
+    const [value, setValue] = React.useState(localStorage.getItem('value') || initialState);
+
+    React.useEffect(() => {
+    localStorage.setItem('value', value);
+    }, [value]);
+
+    return [value, setValue];
+
+  }
+
+
+//Parent Component
+const App = () => {
+
   //Synchronize browser local storage with state
   const [searchTerm, setSearchTerm] = useStorageState('search','React');
   
+  //Making list stateful
+  const [stories, setStories] = React.useState(initialStories)
 
-  //handle change
-  const handleChange = (event) => {
-    setSearchTerm(event.target.value);
+
+  const handleRemoveStory = (item) => {
+    const newStories = stories.filter(
+      (story) => item.objectID !== story.objectID
+    );
+
+    setStories(newStories);
   }
 
   //Callback handler
@@ -100,9 +123,15 @@ const App = () => {
   return(
   <div>
       <h1>{getTitle("My Hacker Stories")}</h1>
-      < Search search={searchTerm} onSearch={handleSearch}/>
-      <hr/>
-      < List list={searchedStories}/>
+      <InputWithLabel
+        id="search"
+        value={searchTerm}
+        isFocused
+        onInputChange={handleSearch}
+      >
+        <strong>Search:</strong>
+      </InputWithLabel>
+      < List list={searchedStories} onRemoveItem={handleRemoveStory}/>
     </div>
   );
   };
