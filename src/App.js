@@ -1,39 +1,13 @@
 import * as React from 'react';
+import axios
+ from 'axios';
+import { type } from '@testing-library/user-event/dist/type';
 //Global Variables
 
 
 //Functions
 const getTitle = (title) => (title);
-
-//Sample data
-const initialStories = [
-    {
-      title: 'React',
-      url: 'https://reactjs.org/',
-      author: 'Jordan Walke',
-      num_comments: 3,
-      points: 4,
-      objectID: 0,
-    },
-    {
-      title: 'Redux',
-      url: 'https://redux.js.org/',
-      author: 'Dan Abramov, Andrew Clark',
-      num_comments: 2,
-      points: 5,
-      objectID: 1,
-    },
-  ];
-
-//Fetching stories asynchronously
-const getAsyncStories = () => 
-  //Create and resolve promise
-  new Promise((resolve) => 
-    setTimeout(
-      () => resolve({data: {stories: initialStories}}),
-      2000
-    )
-  );
+const API_Endpoint = 'https://hn.algolia.com/api/v1/search?query=';
 
 //Reducer
 const storiesReducer = (state, action) => {
@@ -124,18 +98,42 @@ const InputWithLabel = ({ id, value, type='text', onInputChange, isFocused, chil
   );
 };
 
+const SearchForm = ({
+  searchTerm,
+  onSearchInput,
+  onSearchSubmit,
+}) => (
+  <form onSubmit={onSearchSubmit}>
+    <InputWithLabel
+      id="search"
+      value="{searchTerm}"
+      isFocused
+      onInputChange={onSearchInput}
+    >
+      <strong>Search:</strong>
+    </InputWithLabel>
+
+    <button
+    type="submit"
+    disabled={!searchTerm}
+    >
+    Submit
+    </button>
+  </form>
+);
+
 //Handles syncing value of any local storage with state based on unique key id
-  const useStorageState = (key, initialState) => {
+const useStorageState = (key, initialState) => {
 
-    const [value, setValue] = React.useState(localStorage.getItem('value') || initialState);
+  const [value, setValue] = React.useState(localStorage.getItem('value') || initialState);
 
-    React.useEffect(() => {
-    localStorage.setItem('value', value);
-    }, [value]);
+  React.useEffect(() => {
+  localStorage.setItem('value', value);
+  }, [value]);
 
-    return [value, setValue];
+  return [value, setValue];
 
-  }
+}
 
 
 //Parent Component
@@ -144,31 +142,49 @@ const App = () => {
   //Synchronize browser local storage with state
   const [searchTerm, setSearchTerm] = useStorageState('search','React');
 
+  //Making url stateful
+  const [url, setUrl] = React.useState(`${API_Endpoint}${searchTerm}`);
+
   //Converting list to use reducer
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
     {data:[], isLoading: false, isError: false}
   );
 
-  //Use effect to set stories with sample data through async function 
-  React.useEffect(()=>{
+  //Memoized Function
+  const handleFetchStories = React.useCallback(async () => {
     
-    dispatchStories({ type: 'STORIES_FETCH_INIT'})
+    dispatchStories({ type: 'STORIES_FETCH_INIT'});
 
-    getAsyncStories()
-      .then((result) => {
-
+    try{
+      const result = await axios.get(url);
+  
       dispatchStories({
         type: 'STORIES_FETCH_SUCCESS',
-        payload: result.data.stories,
+        payload: result.data.hits
       });
+    } catch {
+      dispatchStories({
+        type:'STORIES_FETCH_FAILURE'
+      })
+    }
 
-    })
-    .catch(() => 
-      dispatchStories({ type: 'FETCH_STORIES_FAILURE' })
-    );
-  },[]);
+  },[url]);
 
+  React.useEffect(() => {
+    handleFetchStories();
+  },[handleFetchStories]);
+
+  //handles user input by saving it in state
+  const handleSearchInput = (event) =>{
+    setSearchTerm(event.target.value);
+  };
+
+  //sets urls when 
+  const handleSearchSubmit = (event) => {
+    setUrl(`${API_Endpoint}${searchTerm}`);
+    event.preventDefault();
+  };
 
   const handleRemoveStory = (item) => {
     dispatchStories({
@@ -177,28 +193,15 @@ const App = () => {
     });
   };
 
-  //Callback handler
-  const handleSearch = (event) => {
-    //save input with state
-    setSearchTerm(event.target.value);
-  };
-
-  //filtering stories
-  const searchedStories = stories.data.filter((story) =>
-    story.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return(
   <div>
       <h1>{getTitle("My Hacker Stories")}</h1>
-      <InputWithLabel
-        id="search"
-        value={searchTerm}
-        isFocused
-        onInputChange={handleSearch}
-      >
-        <strong>Search:</strong>
-      </InputWithLabel>
+
+      <SearchForm
+        searchTerm={searchTerm}
+        onSearchInput={handleSearchInput}
+        onSearchSubmit={handleSearchSubmit}
+      />
 
       <hr />
       { stories.isError && <p>Something went wrong...</p>}
@@ -207,7 +210,7 @@ const App = () => {
       <p> Loading...</p>
       ) : (
         < List 
-          list={searchedStories} 
+          list={stories.data} 
           onRemoveItem={handleRemoveStory}
         />
       )}
